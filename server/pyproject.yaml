@@ -1,0 +1,23 @@
+[project]
+name = "web-to-app-api"
+version = "2.0.0"
+description = "Backend for WebToApp Pro"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "pydantic",
+    "pydantic-settings",
+    "python-multipart",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-dotenv",
+    "alembic",
+    "psycopg2-binary",
+    "cryptography",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
