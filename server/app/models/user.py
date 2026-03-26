@@ -80,6 +80,7 @@ class User(Base):
     devices = relationship("UserDevice", back_populates="user", cascade="all, delete-orphan")
     login_logs = relationship("LoginLog", back_populates="user", cascade="all, delete-orphan")
     pro_transactions = relationship("ProTransaction", back_populates="user", cascade="all, delete-orphan")
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 
     def is_pro_active(self) -> bool:
         """Check if Pro membership is currently active."""
