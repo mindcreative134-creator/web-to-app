@@ -10,4 +10,5 @@ class AdminAuditLog(Base):
     target_type = Column(String(50))
     target_id = Column(BigInteger, nullable=True)
     details = Column(JSON, nullable=True)
+    ip_address = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=utcnow)

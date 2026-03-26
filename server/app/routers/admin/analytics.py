@@ -112,37 +112,41 @@ def analytics_trends(
         months = 12
         since = (now - timedelta(days=365)).replace(day=1)
 
-        # ── Active users trend (monthly) ──
+        # -- Active users trend (monthly) --
+        # Use simple extraction for SQLite/Postgres/MySQL cross-compatibility where possible, 
+        # or handle engine-specific logic. 
+        # For Render (Postgres), to_char is best. For general SQLAlchemy, func.strftime (SQLite) or date_format (MySQL).
+        from sqlalchemy import text
         active_rows = db.query(
-            func.date_format(LoginLog.created_at, '%Y-%m').label("month"),
+            func.to_char(LoginLog.created_at, 'YYYY-MM').label("month"),
             func.count(func.distinct(LoginLog.user_id)).label("cnt"),
         ).filter(
             LoginLog.created_at >= since, LoginLog.success == True
-        ).group_by(func.date_format(LoginLog.created_at, '%Y-%m')).all()
+        ).group_by(text("month")).all()
         active_dict = {r.month: r.cnt for r in active_rows}
         data["active"] = _fill_monthly(active_dict, months, now)
 
-        # ── Pro subscribers trend (monthly) ──
+        # -- Pro subscribers trend (monthly) --
         pro_rows = db.query(
-            func.date_format(User.pro_since, '%Y-%m').label("month"),
+            func.to_char(User.pro_since, 'YYYY-MM').label("month"),
             func.count(case((User.pro_plan.in_(["pro_monthly", "pro_yearly", "pro_lifetime", "lifetime"]), 1))).label("pro_cnt"),
             func.count(case((User.pro_plan.in_(["ultra_monthly", "ultra_yearly", "ultra_lifetime"]), 1))).label("ultra_cnt"),
         ).filter(
             User.pro_since >= since, User.is_pro == True
-        ).group_by(func.date_format(User.pro_since, '%Y-%m')).all()
+        ).group_by(text("month")).all()
         pro_dict = {r.month: r.pro_cnt for r in pro_rows}
         ultra_dict = {r.month: r.ultra_cnt for r in pro_rows}
         data["pro_subscribers"] = _fill_monthly(pro_dict, months, now)
         data["ultra_subscribers"] = _fill_monthly(ultra_dict, months, now)
 
-        # ── Store modules trend (monthly) ──
+        # -- Store modules trend (monthly) --
         app_rows = db.query(
-            func.date_format(StoreModule.created_at, '%Y-%m').label("month"),
+            func.to_char(StoreModule.created_at, 'YYYY-MM').label("month"),
             func.count(case((StoreModule.module_type == "app", 1))).label("app_cnt"),
             func.count(case((StoreModule.module_type != "app", 1))).label("mod_cnt"),
         ).filter(
             StoreModule.created_at >= since, StoreModule.is_approved == True
-        ).group_by(func.date_format(StoreModule.created_at, '%Y-%m')).all()
+        ).group_by(text("month")).all()
         app_dict = {r.month: r.app_cnt for r in app_rows}
         mod_dict = {r.month: r.mod_cnt for r in app_rows}
         data["store_apps"] = _fill_monthly(app_dict, months, now)
@@ -180,36 +184,37 @@ def analytics_trends(
         data["store_modules"] = _fill_yearly(mod_dict, now)
 
     else:  # scope == "all" — cumulative from start ──
-        # ── Cumulative active users (monthly granularity, all time) ──
+        # -- Cumulative active users (monthly granularity, all time) --
+        from sqlalchemy import text
         active_rows = db.query(
-            func.date_format(LoginLog.created_at, '%Y-%m').label("month"),
+            func.to_char(LoginLog.created_at, 'YYYY-MM').label("month"),
             func.count(func.distinct(LoginLog.user_id)).label("cnt"),
         ).filter(LoginLog.success == True).group_by(
-            func.date_format(LoginLog.created_at, '%Y-%m')
-        ).order_by(func.date_format(LoginLog.created_at, '%Y-%m')).all()
+            text("month")
+        ).order_by(text("month")).all()
         data["active"] = [{"date": r.month, "label": r.month, "value": r.cnt} for r in active_rows]
 
-        # ── Cumulative Pro / Ultra subscribers ──
+        # -- Cumulative Pro / Ultra subscribers --
         pro_rows = db.query(
-            func.date_format(User.pro_since, '%Y-%m').label("month"),
+            func.to_char(User.pro_since, 'YYYY-MM').label("month"),
             func.count(case((User.pro_plan.in_(["pro_monthly", "pro_yearly", "pro_lifetime", "lifetime"]), 1))).label("pro_cnt"),
             func.count(case((User.pro_plan.in_(["ultra_monthly", "ultra_yearly", "ultra_lifetime"]), 1))).label("ultra_cnt"),
         ).filter(
             User.is_pro == True, User.pro_since.isnot(None)
-        ).group_by(func.date_format(User.pro_since, '%Y-%m')).order_by(
-            func.date_format(User.pro_since, '%Y-%m')
+        ).group_by(text("month")).order_by(
+            text("month")
         ).all()
         data["pro_subscribers"] = [{"date": r.month, "label": r.month, "value": r.pro_cnt} for r in pro_rows]
         data["ultra_subscribers"] = [{"date": r.month, "label": r.month, "value": r.ultra_cnt} for r in pro_rows]
 
-        # ── Cumulative store items ──
+        # -- Cumulative store items --
         app_rows = db.query(
-            func.date_format(StoreModule.created_at, '%Y-%m').label("month"),
+            func.to_char(StoreModule.created_at, 'YYYY-MM').label("month"),
             func.count(case((StoreModule.module_type == "app", 1))).label("app_cnt"),
             func.count(case((StoreModule.module_type != "app", 1))).label("mod_cnt"),
         ).filter(StoreModule.is_approved == True).group_by(
-            func.date_format(StoreModule.created_at, '%Y-%m')
-        ).order_by(func.date_format(StoreModule.created_at, '%Y-%m')).all()
+            text("month")
+        ).order_by(text("month")).all()
         data["store_apps"] = [{"date": r.month, "label": r.month, "value": r.app_cnt} for r in app_rows]
         data["store_modules"] = [{"date": r.month, "label": r.month, "value": r.mod_cnt} for r in app_rows]
 

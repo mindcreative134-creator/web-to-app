@@ -9,7 +9,7 @@ class ActivationCode(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     code = Column(String(100), unique=True, index=True)
     plan_type = Column(String(50))
-    is_used = Column(Boolean, default=False)
+    status = Column(String(20), default="unused") # unused, used, expired
     used_by_id = Column(BigInteger, ForeignKey("users.id"))
     created_at = Column(DateTime, default=utcnow)
     used_at = Column(DateTime)
